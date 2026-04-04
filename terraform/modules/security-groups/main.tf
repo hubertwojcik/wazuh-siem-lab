@@ -38,26 +38,43 @@ resource "aws_security_group" "alb_sg" {
     }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "allow_1514_wazuh_to_manager" {
+#  Manager
+resource "aws_vpc_security_group_ingress_rule" "allow_1514_from_api_to_manager" {
     security_group_id = aws_security_group.wazuh_manager_sg.id
     
-    referenced_security_group_id = aws_security_group.wazuh_manager_sg
+    referenced_security_group_id = aws_security_group.api_sg.id
     to_port = 1514
     from_port = 1514
-    ip_protocol = "udp"
+    ip_protocol = "tcp"
 } 
-resource "aws_vpc_security_group_ingress_rule" "allow_1515_wazuh_to_manager" {
+resource "aws_vpc_security_group_ingress_rule" "allow_1515_from_api_to_manager" {
     security_group_id = aws_security_group.wazuh_manager_sg.id
     
-    referenced_security_group_id = aws_security_group.wazuh_manager_sg
+    referenced_security_group_id = aws_security_group.api_sg.id
     to_port = 1515
     from_port = 1515
     ip_protocol = "tcp"
 } 
 
-#  Manager
+resource "aws_vpc_security_group_ingress_rule" "allow_1514_from_database_to_manager" {
+    security_group_id = aws_security_group.wazuh_manager_sg.id
+    
+    referenced_security_group_id = aws_security_group.database_sg.id
+    to_port = 1514
+    from_port = 1514
+    ip_protocol = "tcp"
+} 
+resource "aws_vpc_security_group_ingress_rule" "allow_1515_from_database_to_manager" {
+    security_group_id = aws_security_group.wazuh_manager_sg.id
+    
+    referenced_security_group_id = aws_security_group.database_sg.id
+    to_port = 1515
+    from_port = 1515
+    ip_protocol = "tcp"
+} 
+
 resource "aws_vpc_security_group_ingress_rule" "allow_ssh_from_internet_manager" {
-    security_group_id = aws_security_group.wazuh_manager_sg
+    security_group_id = aws_security_group.wazuh_manager_sg.id
 
     cidr_ipv4  = var.allowed_ssh_cidr
     to_port = 22
@@ -66,7 +83,7 @@ resource "aws_vpc_security_group_ingress_rule" "allow_ssh_from_internet_manager"
 }
 
 resource "aws_vpc_security_group_ingress_rule" "allow_https_from_internet_manager" {
-    security_group_id = aws_security_group.wazuh_manager_sg
+    security_group_id = aws_security_group.wazuh_manager_sg.id
 
     cidr_ipv4  = var.allowed_ssh_cidr
     to_port = 443
@@ -74,9 +91,28 @@ resource "aws_vpc_security_group_ingress_rule" "allow_https_from_internet_manage
     ip_protocol = "tcp"
 }
 
+resource "aws_vpc_security_group_egress_rule" "allow_https_to_manager_internet" {
+    security_group_id = aws_security_group.wazuh_manager_sg.id
+
+    cidr_ipv4  = "0.0.0.0/0"
+    to_port = 443
+    from_port = 443
+    ip_protocol = "tcp"
+}
+
+resource "aws_vpc_security_group_egress_rule" "allow_http_to_manager_internet" {
+    security_group_id = aws_security_group.wazuh_manager_sg.id
+
+    cidr_ipv4  = "0.0.0.0/0"
+    to_port = 80
+    from_port = 80
+    ip_protocol = "tcp"
+}
+
+
 # API
 resource "aws_vpc_security_group_ingress_rule" "allow_https_from_internet_api" {
-    security_group_id = aws_security_group.api_sg
+    security_group_id = aws_security_group.api_sg.id
 
     cidr_ipv4 = "0.0.0.0/0"
     to_port = 443
@@ -85,7 +121,7 @@ resource "aws_vpc_security_group_ingress_rule" "allow_https_from_internet_api" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "allow_ssh_from_internet_api" {
-    security_group_id = aws_security_group.api_sg
+    security_group_id = aws_security_group.api_sg.id
 
     cidr_ipv4 = var.allowed_ssh_cidr
     to_port = 22
@@ -94,37 +130,37 @@ resource "aws_vpc_security_group_ingress_rule" "allow_ssh_from_internet_api" {
 } 
 
 resource "aws_vpc_security_group_egress_rule" "allow_https_to_alb" {
-    security_group_id = aws_security_group.api_sg
+    security_group_id = aws_security_group.api_sg.id
 
-    referenced_security_group_id = aws_security_group.alb_sg
+    referenced_security_group_id = aws_security_group.alb_sg.id
     to_port = 443
     from_port = 443
     ip_protocol = "tcp"
 }
 
 resource "aws_vpc_security_group_egress_rule" "allow_postgres_from_api_database" {
-    security_group_id = aws_security_group.api_sg.id
+    security_group_id = aws_security_group.api_sg.id    
 
-    referenced_security_group_id = aws_security_group.database_sg
+    referenced_security_group_id = aws_security_group.database_sg.id
     to_port = 5432
     from_port = 5432
     ip_protocol = "tcp"
 } 
 
 // Database
-resource "aws_vpc_security_group_ingress_rule" "allow_api_postgres" {
+resource "aws_vpc_security_group_ingress_rule" "allow_postgres_from_api" {
     security_group_id = aws_security_group.database_sg.id
     
-    referenced_security_group_id = aws_security_group.api_sg
+    referenced_security_group_id = aws_security_group.api_sg.id
     to_port = 0
     from_port = 0
     ip_protocol = "-1"
 }
 
-resource "aws_vpc_security_group_ingress_rule" "allow_ssh_postgres" {
-    security_group_id = aws_security_group.api_sg
+resource "aws_vpc_security_group_ingress_rule" "allow_ssh_from_api" {
+    security_group_id = aws_security_group.api_sg.id
     
-    cidr_ipv4 = var.allowed_ssh_cidr
+    referenced_security_group_id = aws_security_group.api_sg.id
     to_port = 22
     from_port = 22
     ip_protocol = "tcp"
@@ -132,8 +168,8 @@ resource "aws_vpc_security_group_ingress_rule" "allow_ssh_postgres" {
 
 
 // ALB
-resource "aws_vpc_security_group_ingress_rule" "allow_https_alb" {
-    security_group_id = aws_security_group.alb_sg
+resource "aws_vpc_security_group_ingress_rule" "allow_https_internet_alb" {
+    security_group_id = aws_security_group.alb_sg.id
 
     cidr_ipv4 = "0.0.0.0/0"
     from_port = 443
@@ -141,8 +177,8 @@ resource "aws_vpc_security_group_ingress_rule" "allow_https_alb" {
     ip_protocol = "tcp"
 }
 
-resource "aws_vpc_security_group_ingress_rule" "allow_http_alb" {
-    security_group_id = aws_security_group.alb_sg
+resource "aws_vpc_security_group_ingress_rule" "allow_http_internet_alb" {
+    security_group_id = aws_security_group.alb_sg.id
 
     cidr_ipv4 = "0.0.0.0/0"
     from_port = 80
